@@ -20,7 +20,6 @@ def load_yolo_weights(model, weights_file):
         range1 = 110 if not TRAIN_YOLO_TINY else 21
         range2 = [93, 101, 109] if not TRAIN_YOLO_TINY else [17, 20]
 
-
     with open(weights_file, 'rb') as wf:
         major, minor, revision, seen, _ = np.fromfile(wf, dtype=np.int32, count=5)
 
@@ -66,30 +65,19 @@ def load_yolo_weights(model, weights_file):
         assert len(wf.read()) == 0, 'failed to read all data'
 
 def Load_Yolo_model():
-    gpus = tf.config.experimental.list_physical_devices('GPU')
-    if len(gpus) > 0:
-        print(f'GPUs {gpus}')
-        try: tf.config.experimental.set_memory_growth(gpus[0], True)
-        except RuntimeError: pass
         
-    if YOLO_FRAMEWORK == "tf": # TensorFlow detection
-        if YOLO_TYPE == "yolov3":
-            Darknet_weights = YOLO_V3_TINY_WEIGHTS if TRAIN_YOLO_TINY else YOLO_V3_WEIGHTS
-            
-        if YOLO_CUSTOM_WEIGHTS == False:
-            yolo = Create_Yolo(input_size=YOLO_INPUT_SIZE, CLASSES=YOLO_COCO_CLASSES)
-            load_yolo_weights(yolo, Darknet_weights) # use Darknet weights
-        else:
-            save_directory = os.path.join(TRAIN_CHECKPOINTS_FOLDER, DATA_TYPE)
-            yolo = Create_Yolo(input_size=YOLO_INPUT_SIZE, CLASSES=TRAIN_CLASSES)
-            yolo.load_weights(save_directory)
-            # yolo.load_weights(f"./checkpoints/{TRAIN_MODEL_NAME}") # use custom weights
-        
-    elif YOLO_FRAMEWORK == "trt": # TensorRT detection
-        saved_model_loaded = tf.saved_model.load(YOLO_CUSTOM_WEIGHTS, tags=[tag_constants.SERVING])
-        signature_keys = list(saved_model_loaded.signatures.keys())
-        yolo = saved_model_loaded.signatures['serving_default']
+    if YOLO_TYPE == "yolov3":
+        Darknet_weights = YOLO_V3_TINY_WEIGHTS if TRAIN_YOLO_TINY else YOLO_V3_WEIGHTS
 
+    if YOLO_CUSTOM_WEIGHTS == False:
+        yolo = Create_Yolo(input_size=YOLO_INPUT_SIZE, CLASSES=YOLO_COCO_CLASSES)
+        load_yolo_weights(yolo, Darknet_weights) # use Darknet weights
+    else:
+        save_directory = os.path.join(TRAIN_CHECKPOINTS_FOLDER, DATA_TYPE)
+        yolo = Create_Yolo(input_size=YOLO_INPUT_SIZE, CLASSES=TRAIN_CLASSES)
+        yolo.load_weights(save_directory)
+        # yolo.load_weights(f"./checkpoints/{TRAIN_MODEL_NAME}") # use custom weights
+        
     return yolo
 
 def image_preprocess(image, target_size, gt_boxes=None):
@@ -112,7 +100,6 @@ def image_preprocess(image, target_size, gt_boxes=None):
         gt_boxes[:, [0, 2]] = gt_boxes[:, [0, 2]] * scale + dw
         gt_boxes[:, [1, 3]] = gt_boxes[:, [1, 3]] * scale + dh
         return image_paded, gt_boxes
-
 
 def draw_bbox(image, bboxes, CLASSES=YOLO_COCO_CLASSES, show_label=True, show_confidence = True, Text_colors=(255,255,0), rectangle_colors='', tracking=False):   
     NUM_CLASS = read_class_names(CLASSES)
@@ -177,7 +164,6 @@ def bboxes_iou(boxes1, boxes2):
 
     return ious
 
-
 def nms(bboxes, iou_threshold, sigma=0.3, method='nms'):
     """
     :param bboxes: (xmin, ymin, xmax, ymax, score, class)
@@ -217,7 +203,6 @@ def nms(bboxes, iou_threshold, sigma=0.3, method='nms'):
             cls_bboxes = cls_bboxes[score_mask]
 
     return best_bboxes
-
 
 def postprocess_boxes(pred_bbox, original_image, input_size, score_threshold):
     valid_scale=[0, np.inf]
@@ -259,7 +244,6 @@ def postprocess_boxes(pred_bbox, original_image, input_size, score_threshold):
 
     return np.concatenate([coors, scores[:, np.newaxis], classes[:, np.newaxis]], axis=-1)
 
-
 def detect_image(Yolo, image_path, output_path, input_size=416, show=False, CLASSES=YOLO_COCO_CLASSES, score_threshold=0.3, iou_threshold=0.45, rectangle_colors=''):
     original_image      = cv2.imread(image_path)
     original_image      = cv2.cvtColor(original_image, cv2.COLOR_BGR2RGB)
@@ -270,14 +254,7 @@ def detect_image(Yolo, image_path, output_path, input_size=416, show=False, CLAS
 
     if YOLO_FRAMEWORK == "tf":
         pred_bbox = Yolo.predict(image_data)
-    elif YOLO_FRAMEWORK == "trt":
-        batched_input = tf.constant(image_data)
-        result = Yolo(batched_input)
-        pred_bbox = []
-        for key, value in result.items():
-            value = value.numpy()
-            pred_bbox.append(value)
-        
+       
     pred_bbox = [tf.reshape(x, (-1, tf.shape(x)[-1])) for x in pred_bbox]
     pred_bbox = tf.concat(pred_bbox, axis=0)
     
@@ -313,19 +290,11 @@ def Predict_bbox_mp(Frames_data, Predicted_data, Processing_times):
             
             if YOLO_FRAMEWORK == "tf":
                 pred_bbox = Yolo.predict(image_data)
-            elif YOLO_FRAMEWORK == "trt":
-                batched_input = tf.constant(image_data)
-                result = Yolo(batched_input)
-                pred_bbox = []
-                for key, value in result.items():
-                    value = value.numpy()
-                    pred_bbox.append(value)
-
+                
             pred_bbox = [tf.reshape(x, (-1, tf.shape(x)[-1])) for x in pred_bbox]
             pred_bbox = tf.concat(pred_bbox, axis=0)
             
             Predicted_data.put(pred_bbox)
-
 
 def postprocess_mp(Predicted_data, original_frames, Processed_frames, Processing_times, input_size, CLASSES, score_threshold, iou_threshold, rectangle_colors, realtime):
     times = []
@@ -442,13 +411,6 @@ def detect_video(Yolo, video_path, output_path, input_size=416, show=False, CLAS
         t1 = time.time()
         if YOLO_FRAMEWORK == "tf":
             pred_bbox = Yolo.predict(image_data)
-        elif YOLO_FRAMEWORK == "trt":
-            batched_input = tf.constant(image_data)
-            result = Yolo(batched_input)
-            pred_bbox = []
-            for key, value in result.items():
-                value = value.numpy()
-                pred_bbox.append(value)
         
         t2 = time.time()
         
@@ -510,13 +472,6 @@ def detect_realtime(Yolo, output_path, input_size=416, show=False, CLASSES=YOLO_
         t1 = time.time()
         if YOLO_FRAMEWORK == "tf":
             pred_bbox = Yolo.predict(image_data)
-        elif YOLO_FRAMEWORK == "trt":
-            batched_input = tf.constant(image_data)
-            result = Yolo(batched_input)
-            pred_bbox = []
-            for key, value in result.items():
-                value = value.numpy()
-                pred_bbox.append(value)
         
         t2 = time.time()
         
