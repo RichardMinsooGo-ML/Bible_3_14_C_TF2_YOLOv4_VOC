@@ -2,7 +2,6 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Conv2D, Input, LeakyReLU, ZeroPadding2D, BatchNormalization, MaxPool2D
 from tensorflow.keras.regularizers import l2
-# from yolov3.utils import read_class_names
 from configuration import *
 
 STRIDES         = np.array(YOLO_STRIDES)
@@ -135,48 +134,6 @@ def cspdarknet53(input_data):
 
     return route_1, route_2, input_data
 
-def cspdarknet53_tiny(input_data): # not sure how this should be called
-    input_data = DarknetConv2D(input_data, (3, 3, 3, 32), downsample=True)
-    input_data = DarknetConv2D(input_data, (3, 3, 32, 64), downsample=True)
-    input_data = DarknetConv2D(input_data, (3, 3, 64, 64))
-
-    route = input_data
-    input_data = route_group(input_data, 2, 1)
-    input_data = DarknetConv2D(input_data, (3, 3, 32, 32))
-    route_1 = input_data
-    input_data = DarknetConv2D(input_data, (3, 3, 32, 32))
-    input_data = tf.concat([input_data, route_1], axis=-1)
-    input_data = DarknetConv2D(input_data, (1, 1, 32, 64))
-    input_data = tf.concat([route, input_data], axis=-1)
-    input_data = MaxPool2D(2, 2, 'same')(input_data)
-
-    input_data = DarknetConv2D(input_data, (3, 3, 64, 128))
-    route = input_data
-    input_data = route_group(input_data, 2, 1)
-    input_data = DarknetConv2D(input_data, (3, 3, 64, 64))
-    route_1 = input_data
-    input_data = DarknetConv2D(input_data, (3, 3, 64, 64))
-    input_data = tf.concat([input_data, route_1], axis=-1)
-    input_data = DarknetConv2D(input_data, (1, 1, 64, 128))
-    input_data = tf.concat([route, input_data], axis=-1)
-    input_data = MaxPool2D(2, 2, 'same')(input_data)
-
-    input_data = DarknetConv2D(input_data, (3, 3, 128, 256))
-    route = input_data
-    input_data = route_group(input_data, 2, 1)
-    input_data = DarknetConv2D(input_data, (3, 3, 128, 128))
-    route_1 = input_data
-    input_data = DarknetConv2D(input_data, (3, 3, 128, 128))
-    input_data = tf.concat([input_data, route_1], axis=-1)
-    input_data = DarknetConv2D(input_data, (1, 1, 128, 256))
-    route_1 = input_data
-    input_data = tf.concat([route, input_data], axis=-1)
-    input_data = MaxPool2D(2, 2, 'same')(input_data)
-
-    input_data = DarknetConv2D(input_data, (3, 3, 512, 512))
-
-    return route_1, input_data
-
 def YOLOv4(input_layer, NUM_CLASS):
     route_1, route_2, conv = cspdarknet53(input_layer)
 
@@ -235,33 +192,13 @@ def YOLOv4(input_layer, NUM_CLASS):
 
     return [conv_sbbox, conv_mbbox, conv_lbbox]
 
-def YOLOv4_tiny(input_layer, NUM_CLASS):
-    route_1, conv = cspdarknet53_tiny(input_layer)
-
-    conv = DarknetConv2D(conv, (1, 1, 512, 256))
-
-    conv_lobj_branch = DarknetConv2D(conv, (3, 3, 256, 512))
-    conv_lbbox = DarknetConv2D(conv_lobj_branch, (1, 1, 512, 3 * (NUM_CLASS + 5)), activate=False, bn=False)
-
-    conv = DarknetConv2D(conv, (1, 1, 256, 128))
-    conv = upsample(conv)
-    conv = tf.concat([conv, route_1], axis=-1)
-
-    conv_mobj_branch = DarknetConv2D(conv, (3, 3, 128, 256))
-    conv_mbbox = DarknetConv2D(conv_mobj_branch, (1, 1, 256, 3 * (NUM_CLASS + 5)), activate=False, bn=False)
-
-    return [conv_mbbox, conv_lbbox]
 
 def Create_Yolo(input_size=416, channels=3, training=False, CLASSES=YOLO_COCO_CLASSES):
     NUM_CLASS = len(read_class_names(CLASSES))
     input_layer  = Input([input_size, input_size, channels])
 
-    if TRAIN_YOLO_TINY:
-        if YOLO_TYPE == "yolov4":
-            conv_tensors = YOLOv4_tiny(input_layer, NUM_CLASS)
-    else:
-        if YOLO_TYPE == "yolov4":
-            conv_tensors = YOLOv4(input_layer, NUM_CLASS)
+    if YOLO_TYPE == "yolov4":
+        conv_tensors = YOLOv4(input_layer, NUM_CLASS)
 
     output_tensors = []
     for i, conv_tensor in enumerate(conv_tensors):
