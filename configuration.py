@@ -18,7 +18,7 @@ TRAIN_CLASSES               = "./dataset/voc/voc2012.names"
 TRAIN_ANNOT_PATH            = "./dataset/voc/VOC2012_train.txt"
 TEST_ANNOT_PATH             = "./dataset/voc/VOC2012_val.txt"
 
-YOLO_TYPE == "yolov4":
+if YOLO_TYPE == "yolov4":
     TRAIN_CHECKPOINTS_FOLDER    = "./checkpoints"
     DATA_TYPE = "yolo_v4_voc"
     
