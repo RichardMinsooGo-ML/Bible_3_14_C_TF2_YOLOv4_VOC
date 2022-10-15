@@ -20,23 +20,7 @@ def load_yolo_weights(model, weights_file):
         range1 = 110 if not TRAIN_YOLO_TINY else 21
         range2 = [93, 101, 109] if not TRAIN_YOLO_TINY else [17, 20]
 
-    """
-    if is_tiny:
-        if model_name == 'yolov3':
-            layer_size = 13
-            output_pos = [9, 12]
-        else:
-            layer_size = 21
-            output_pos = [17, 20]
-    else:
-        if model_name == 'yolov3':
-            layer_size = 75
-            output_pos = [58, 66, 74]
-        else:
-            layer_size = 110
-            output_pos = [93, 101, 109]
-    """
-    
+
     with open(weights_file, 'rb') as wf:
         major, minor, revision, seen, _ = np.fromfile(wf, dtype=np.int32, count=5)
 
