@@ -3,7 +3,7 @@ dataset_name = "voc"
 TRAIN_TRANSFER        = True
 TRAIN_FROM_CHECKPOINT = False # "saved_model/yolov3_custom"
 TRAIN_YOLO_TINY       = False
-YOLO_CUSTOM_WEIGHTS   = False # "checkpoints/yolov3_custom" # used in evaluate_mAP.py and custom model detection, if not using leave False
+YOLO_CUSTOM_WEIGHTS   = True # "checkpoints/yolov3_custom" # used in evaluate_mAP.py and custom model detection, if not using leave False
                              # YOLO_CUSTOM_WEIGHTS also used with TensorRT and custom model detection    
 
 # YOLO options
